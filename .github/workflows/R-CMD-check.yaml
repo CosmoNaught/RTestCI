@@ -1,35 +1,47 @@
 name: R-CMD-check
- 
+
 on: [push, pull_request]
- 
+
 jobs:
   R-CMD-check:
     runs-on: ${{ matrix.config.os }}
     strategy:
+      fail-fast: false  # Continue other jobs if one fails
       matrix:
         config:
           - { os: windows-latest, r: 'release' }
+          - { os: windows-latest, r: 'devel' }
           - { os: macos-latest, r: 'release' }
-          - { os: ubuntu-latest, r: 'devel' }
+          - { os: macos-latest, r: 'devel' }
           - { os: ubuntu-latest, r: 'release' }
+          - { os: ubuntu-latest, r: 'devel' }
           - { os: ubuntu-latest, r: 'oldrel' }
- 
+          - { os: ubuntu-20.04, r: 'release' }
+          - { os: ubuntu-18.04, r: 'release' }
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
- 
+
     - name: Set up R
       uses: r-lib/actions/setup-r@v2
       with:
         r-version: ${{ matrix.config.r }}
- 
+
     - name: Install dependencies
       run: |
         install.packages('remotes')
         remotes::install_deps(dependencies = TRUE)
-        install.packages(c('lintr', 'testthat'))
+        install.packages(c('lintr', 'testthat', 'covr'))
+
     - name: Lint the package
       run: Rscript -e "lintr::lint_package()"
- 
+
     - name: Check the package
       run: R CMD check --no-manual --as-cran
+
+    - name: Test the package
+      run: Rscript -e "testthat::test_dir('tests/')"
+
+    - name: Test coverage
+      run: Rscript -e "covr::codecov()"
